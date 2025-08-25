@@ -5,9 +5,11 @@ buildscript {
     repositories {
         google()
         jcenter()
+        mavenCentral() // 推荐加上，避免 jcenter 已废弃的问题
     }
 
     dependencies {
+        // Gradle Plugin，按需可升级
         classpath 'com.android.tools.build:gradle:4.1.0'
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.15'
     }
@@ -17,6 +19,7 @@ rootProject.allprojects {
     repositories {
         google()
         jcenter()
+        mavenCentral()
     }
 }
 
@@ -29,30 +32,47 @@ android {
     defaultConfig {
         minSdkVersion 19
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
     sourceSets {
         main {
             proto {
+                // 默认 proto 文件路径
                 srcDir '../protos'
             }
         }
     }
 }
 
+// ---- Protobuf 配置 ----
 protobuf {
     protoc {
         artifact = 'com.google.protobuf:protoc:3.17.3'
     }
+
     generateProtoTasks {
         all().each { task ->
+            // 关键修改：动态创建 generatedFilesBaseDir，避免 Gradle 7.x 报错
+            if (!project.hasProperty('generatedFilesBaseDir')) {
+                project.ext.generatedFilesBaseDir = "${project.buildDir}/generated/source/proto"
+            }
+
             task.builtins {
                 java {
                     option "lite"
+                    // 指定输出目录为动态生成的目录
+                    outputDir = file("${project.ext.generatedFilesBaseDir}/${task.name}")
                 }
             }
         }
     }
 }
 
+// ---- 依赖 ----
 dependencies {
     implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
 }
